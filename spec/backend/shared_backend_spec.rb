@@ -78,6 +78,14 @@ shared_examples_for 'a backend' do
     job.should_receive(:attempt_to_load).with('Delayed::JobThatDoesNotExist').and_return(true)
     lambda { job.payload_object.perform }.should raise_error(Delayed::Backend::DeserializationError)
   end
+
+  describe "::enqueue" do
+    it "uses the current client to construct the job" do
+      Hijacker.stub(:current_client).and_return("23 Skidoo")
+      @backend.should_receive(:create).with(hash_including(:database => "23 Skidoo"))
+      @backend.enqueue SimpleJob.new
+    end
+  end
   
   describe "find_available" do
     it "should not find failed jobs" do
@@ -170,6 +178,15 @@ shared_examples_for 'a backend' do
     it "should not allow a second worker to get exclusive access if failed to be processed by worker1 and run_at time is now in future (due to backing off behaviour)" do
       @job.update_attributes(:attempts => 1, :run_at => 1.day.from_now)
       @job_copy_for_worker_2.lock_exclusively!(4.hours, 'worker2').should == false
+    end
+  end
+
+  describe "#invoke_job" do
+    subject { @backend.create :payload_object => SimpleJob.new, :database => "23 Skidoo" }
+
+    it "connects to the client database" do
+      Hijacker.should_receive(:connect).with("23 Skidoo")
+      subject.invoke_job
     end
   end
 
