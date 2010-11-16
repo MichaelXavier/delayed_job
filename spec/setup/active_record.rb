@@ -1,7 +1,9 @@
 require 'active_record'
 
-ActiveRecord::Base.establish_connection(:adapter => 'sqlite3', :database => ':memory:')
-ActiveRecord::Base.logger = Delayed::Worker.logger
+ActiveRecord::Base.configurations['root'] = {:adapter => 'sqlite3', 
+                                          :database => ':memory:'}
+ActiveRecord::Base.establish_connection(
+  ActiveRecord::Base.configurations['root'])
 ActiveRecord::Migration.verbose = false
 
 ActiveRecord::Schema.define do
@@ -14,6 +16,7 @@ ActiveRecord::Schema.define do
     table.datetime :locked_at
     table.datetime :failed_at
     table.string   :locked_by
+    table.string   :database
     table.timestamps
   end
 
@@ -24,10 +27,7 @@ ActiveRecord::Schema.define do
   end
 end
 
-# Purely useful for test cases...
-class Story < ActiveRecord::Base
-  def tell; text; end       
-  def whatever(n, _); tell*n; end
-  
-  handle_asynchronously :whatever
+# I am an asshole
+class ActiveRecord::ConnectionAdapters::SQLite3Adapter
+  attr_reader :config
 end

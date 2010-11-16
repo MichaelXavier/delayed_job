@@ -1,3 +1,8 @@
+# Ugly setup stuff we have to do to test outside of a rails project
+require 'setup/active_record'
+ENV['RAILS_ENV'] = 'test'
+require File.join(File.dirname(__FILE__), "../vendor/hijacker/init")
+
 $:.unshift(File.dirname(__FILE__) + '/../lib')
 
 require 'rubygems'
@@ -17,7 +22,6 @@ BACKENDS = []
 Dir.glob("#{File.dirname(__FILE__)}/setup/*.rb") do |backend|
   begin
     backend = File.basename(backend, '.rb')
-    require "setup/#{backend}"
     require "backend/#{backend}_job_spec"
     BACKENDS << backend.to_sym
   rescue LoadError
@@ -25,4 +29,21 @@ Dir.glob("#{File.dirname(__FILE__)}/setup/*.rb") do |backend|
   end
 end
 
+ActiveRecord::Base.logger = Delayed::Worker.logger
+
+# Purely useful for test cases...
+class Story < ActiveRecord::Base
+  def tell; text; end       
+  def whatever(n, _); tell*n; end
+  
+  handle_asynchronously :whatever
+end
+
 Delayed::Worker.backend = BACKENDS.first
+
+Spec::Runner.configure do |config|
+  config.before(:each) do
+    Hijacker.stub(:current_client).and_return('test')
+    Hijacker.stub(:connect)
+  end
+end

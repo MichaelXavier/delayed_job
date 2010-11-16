@@ -9,7 +9,7 @@ module Delayed
       end
       
       module ClassMethods
-        # Add a job to the queue
+        # Add a job to the queue or perform inline if synchronous
         def enqueue(*args)
           object = args.shift
           unless object.respond_to?(:perform)
@@ -18,7 +18,15 @@ module Delayed
     
           priority = args.first || Delayed::Worker.default_priority
           run_at   = args[1]
-          self.create(:payload_object => object, :priority => priority.to_i, :run_at => run_at)
+
+          if synchronous? 
+            object.perform
+          else
+            self.create(:payload_object => object, 
+                        :priority       => priority.to_i,
+                        :run_at         => run_at,
+                        :database       => Hijacker.current_client)
+          end
         end
         
         # Hook method that is called before a new worker is forked
@@ -32,6 +40,20 @@ module Delayed
         def work_off(num = 100)
           warn "[DEPRECATION] `Delayed::Job.work_off` is deprecated. Use `Delayed::Worker.new.work_off instead."
           Delayed::Worker.new.work_off(num)
+        end
+
+        #MXDEBUG: SPECME if extended, i'm assuming @@ is the right variable to use, but
+        #in ruby classes are instances or some such wacky shit
+        def synchrony=(val)
+          @@synchrony = val
+        end
+
+        def synchrony
+          @@synchrony ||= false
+        end
+
+        def synchronous?
+          synchrony
         end
       end
       
@@ -63,7 +85,13 @@ module Delayed
 
       # Moved into its own method so that new_relic can trace it.
       def invoke_job
+        Hijacker.connect(database)
+
+        base_name = $0
+        $0 = "#{base_name}: #{database} #{payload_object.to_s}"
         payload_object.perform
+      ensure
+        $0 = base_name if base_name
       end
       
       # Unlock this job (note: not saved to DB)
