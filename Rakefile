@@ -23,12 +23,6 @@ Jeweler::Tasks.new do |s|
   s.add_dependency "daemons"
   s.add_development_dependency "rspec"
   s.add_development_dependency "sqlite3-ruby"
-  s.add_development_dependency "mongo_mapper"
-  s.add_development_dependency "dm-core"
-  s.add_development_dependency "dm-observer"
-  s.add_development_dependency "dm-aggregates"
-  s.add_development_dependency "dm-validations"
-  s.add_development_dependency "do_sqlite3"
   s.add_development_dependency "database_cleaner"
 end
 
