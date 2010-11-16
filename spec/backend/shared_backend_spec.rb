@@ -9,7 +9,7 @@ shared_examples_for 'a backend' do
     Delayed::Worker.default_priority = 99
     SimpleJob.runs = 0
   end
-  
+
   it "should set run_at automatically if not set" do
     @backend.create(:payload_object => ErrorJob.new ).run_at.should_not be_nil
   end
@@ -27,7 +27,7 @@ shared_examples_for 'a backend' do
     @backend.enqueue SimpleJob.new
     @backend.count.should == 1
   end
-  
+
   it "should be able to set priority when enqueuing items" do
     @job = @backend.enqueue SimpleJob.new, 5
     @job.priority.should == 5
@@ -236,7 +236,7 @@ shared_examples_for 'a backend' do
       @backend.find_available('worker1', 5, 1.minute).should_not include(@job)
     end
   end
-  
+
   context "unlock" do
     before do
       @job = create_job(:locked_by => 'worker', :locked_at => @backend.db_time_now)
@@ -248,15 +248,37 @@ shared_examples_for 'a backend' do
       @job.locked_at.should be_nil
     end
   end
-  
+
   context "large handler" do
     before do
       text = "Lorem ipsum dolor sit amet. " * 1000
       @job = @backend.enqueue Delayed::PerformableMethod.new(text, :length, {})
     end
-    
+
     it "should have an id" do
       @job.id.should_not be_nil
+    end
+  end
+
+  context "while running under the test environment" do:w
+    before do
+      @backend.synchrony = true
+    end
+
+    after do
+      @backend.synchrony = false
+    end
+
+    it "should not enqueue a job" do
+      expect do
+        @backend.enqueue SimpleJob.new
+      end.to_not change(@backend,:count)
+    end
+
+    it "should call the object's perform method immediately" do
+      simple = SimpleJob.new
+      simple.should_receive(:perform)
+      @backend.enqueue simple
     end
   end
 end
