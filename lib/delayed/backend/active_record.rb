@@ -21,7 +21,7 @@ module Delayed
       # Contains the work object as a YAML field.
       class Job < ::ActiveRecord::Base
         include Delayed::Backend::Base
-        establish_connection(Hijacker.root_connection.config) unless ENV['RAILS_ENV'] == 'test'
+        establish_connection(Hijacker.root_connection.config) unless !defined?(Rails) && ENV['RAILS_ENV'] == 'test'
 
         set_table_name :delayed_jobs
         
