@@ -49,6 +49,9 @@ module Delayed
       @quiet = options[:quiet]
       self.class.min_priority = options[:min_priority] if options.has_key?(:min_priority)
       self.class.max_priority = options[:max_priority] if options.has_key?(:max_priority)
+
+      # This should be safe for delayed_job_spawner
+      self.name = default_name
     end
 
     # Every worker has a unique name which by default is the pid of the process. There are some
@@ -56,8 +59,7 @@ module Delayed
     # safely resume working on tasks which are locked by themselves. The worker will assume that
     # it crashed before.
     def name
-      return @name unless @name.nil?
-      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}"
+      @name ||= default_name
     end
 
     # Sets the name of the worker.
@@ -179,6 +181,10 @@ module Delayed
       end
 
       run(job) if job
+    end
+
+    def default_name
+      "#{@name_prefix}host:#{Socket.gethostname} pid:#{Process.pid}" rescue "#{@name_prefix}pid:#{Process.pid}"
     end
   end
 end

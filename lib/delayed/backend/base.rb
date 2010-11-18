@@ -42,7 +42,6 @@ module Delayed
           Delayed::Worker.new.work_off(num)
         end
 
-        #MXDEBUG: SPECME if extended, i'm assuming @@ is the right variable to use, but
         #in ruby classes are instances or some such wacky shit
         def synchrony=(val)
           @@synchrony = val
